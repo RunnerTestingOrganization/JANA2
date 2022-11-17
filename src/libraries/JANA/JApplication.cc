@@ -146,7 +146,15 @@ void JApplication::Initialize() {
 
 void JApplication::Run(bool wait_until_finished) {
 
+    // We want to be able to call Run() after a previous call to Run() had been Pause()d
+    m_pausing = false;
+
+    // However, we don't want people to call Run() after a previous call to Run() had been Quit()ted
+    // because all arrows (particularly JEventProcessors) will have been finalized.
+
     Initialize();
+
+    // If someone interrupted initialization, don't bother spinning up and tearing down the thread pool
     if (m_quitting || m_pausing) return;
 
     // Print summary of all config parameters (if any aren't default)
@@ -182,8 +190,8 @@ void JApplication::Run(bool wait_until_finished) {
             LOG_INFO(m_logger) << "All workers have finished." << LOG_END;
             break;
         }
-        else if (m_processing_controller->is_stopped()) {
-            // Event processing ended prematurely because the user called JApp::Stop(), JApp::Quit(), or SIGINT.
+        else if (m_processing_controller->is_paused()) {
+            // Event processing ended prematurely because the user called JApp::Pause(), JApp::Quit(), or SIGINT.
             // If the user called Stop(), we DON'T want Join() to finalize all arrows, so that processing can restart.
             // but if they called Quit(), we DO. Stop() and Quit() will set m_pausing and m_quitting, respectively.
             LOG_INFO(m_logger) << "All workers have been stopped." << LOG_END;
@@ -200,7 +208,7 @@ void JApplication::Run(bool wait_until_finished) {
         if(m_timeout_on && m_processing_controller->is_timed_out()) {
             LOG_FATAL(m_logger) << "Detected timeout in worker! Stopping." << LOG_END;
             SetExitCode((int) ExitCode::Timeout);
-            m_processing_controller->request_stop();
+            m_processing_controller->request_pause();
             // TODO: Timeout error is not obvious enough from UI. Maybe throw an exception instead?
             // TODO: Send USR2 signal to obtain a backtrace for timed out threads?
             break;
@@ -210,7 +218,7 @@ void JApplication::Run(bool wait_until_finished) {
         if (m_processing_controller->is_excepted()) {
             LOG_FATAL(m_logger) << "Detected exception in worker! Re-throwing on main thread." << LOG_END;
             SetExitCode((int) ExitCode::UnhandledException);
-            m_processing_controller->request_stop();
+            m_processing_controller->request_pause();
 
             // We are going to throw the first exception and ignore the others.
             throw m_processing_controller->get_exceptions()[0];
@@ -222,9 +230,11 @@ void JApplication::Run(bool wait_until_finished) {
 void JApplication::Join() {
     // Join all threads
     LOG_INFO(m_logger) << "Joining worker threads..." << LOG_END;
-    // TODO: if m_pausing then wait_until_paused() else wait_until_stopped
-    m_processing_controller->wait_until_stopped();
+    m_processing_controller->join();
 
+    if (!m_pausing) {
+        m_processing_controller->finish();
+    }
     LOG_INFO(m_logger) << "Event processing ended." << LOG_END;
     PrintFinalReport();
 
@@ -246,14 +256,22 @@ void JApplication::Scale(int nthreads) {
 
 void JApplication::Pause(bool drain_queues) {
     m_pausing = true;
-    m_processing_controller->request_stop();
-    // TODO: if drain_queues then m_processing_controller->request_drain() else m_processing_controller->request_pause()
+    if (drain_queues) {
+        m_processing_controller->request_drain();
+    }
+    else {
+        m_processing_controller->request_pause();
+    }
 }
 
 void JApplication::Quit(bool drain_queues) {
     m_quitting = true;
-    m_processing_controller->request_stop();
-    // TODO: if drain_queues then m_processing_controller->request_drain() else m_processing_controller->request_pause()
+    if (drain_queues) {
+        m_processing_controller->request_drain();
+    }
+    else {
+        m_processing_controller->request_pause();
+    }
 }
 
 void JApplication::SetExitCode(int exit_code) {

@@ -29,6 +29,7 @@ TEST_CASE("TerminationTests") {
         app.Run(false);
         std::this_thread::sleep_for(std::chrono::milliseconds(50));
         app.Quit(true);
+        app.Join();
         REQUIRE(source->event_count > 0);
         REQUIRE(processor->finish_call_count == 1);
         REQUIRE(app.GetNEventsProcessed() == source->event_count);
@@ -80,6 +81,7 @@ TEST_CASE("TerminationTests") {
         app.Run(false);
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
         app.Quit(true);
+        app.Join();
         REQUIRE(source->event_count > 0);
         REQUIRE(app.GetNEventsProcessed() == source->event_count);
         REQUIRE(processor->finish_call_count == 1);

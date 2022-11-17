@@ -92,7 +92,13 @@ void JArrowProcessingController::scale(size_t nthreads) {
     };
 }
 
+void JArrowProcessingController::request_drain() {
+    // Shut off the sources; the workers will stop on their own once the queues empty.
+    m_topology->drain();
+}
+
 void JArrowProcessingController::request_pause() {
+    // Shut off all arrows, possibly leaving work on queues.
     m_topology->request_pause();
     // Or:
     // for (JWorker* worker : m_workers) {
@@ -100,7 +106,7 @@ void JArrowProcessingController::request_pause() {
     // }
 }
 
-void JArrowProcessingController::wait_until_paused() {
+void JArrowProcessingController::join() {
     for (JWorker* worker : m_workers) {
         worker->wait_for_stop();
     }
@@ -110,30 +116,11 @@ void JArrowProcessingController::wait_until_paused() {
     m_topology->achieve_pause();
 }
 
-void JArrowProcessingController::request_stop() {
-    // Shut off the sources; the workers will stop on their own once they run out of assignments.
-    // Unlike request_pause, this drains all queues.
-    // Conceivably, a user could request_stop() followed by wait_until_paused(), which would drain all queues but
-    // leave the topology in a restartable state. This suggests we might want to rename some of these things.
-    // e.g. request_stop      =>   drain OR drain_then_pause
-    //      request_pause     =>   pause
-    //      wait_until_stop   =>   join_then_finish
-    //      wait_until_pause  =>   join
-    m_topology->drain();
-}
-
-void JArrowProcessingController::wait_until_stopped() {
-    // Join all workers
-    for (JWorker* worker : m_workers) {
-        worker->wait_for_stop();
-    }
-    // finish out the topology
-    // (note some arrows might have already finished e.g. event sources, but that's fine, finish() is idempotent)
-    m_topology->achieve_pause();
+void JArrowProcessingController::finish() {
     m_topology->finish();
 }
 
-bool JArrowProcessingController::is_stopped() {
+bool JArrowProcessingController::is_paused() {
     // TODO: Protect topology current status
     return m_topology->m_current_status == JArrowTopology::Status::Paused;
 }

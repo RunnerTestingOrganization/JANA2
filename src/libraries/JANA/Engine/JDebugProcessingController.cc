@@ -74,13 +74,9 @@ void JDebugProcessingController::run_worker() {
             for (auto evt_src: evt_srces) {
                 finish_achieved &= (evt_src->GetStatus() == JEventSource::SourceStatus::Finished);
             }
-            m_finish_achieved = finish_achieved;
 
-            // Previously, we finalized event processors _only_ if finish was achieved.
-            // Now, however, "stop" means finalize everything, and the alternative is named "pause".
-            LOG_INFO(m_logger) << "Last worker is finalizing the event processors" << LOG_END;
-            for (JEventProcessor *evt_prc: evt_procs) {
-                evt_prc->DoFinalize();
+            if (finish_achieved) {
+                finish();
             }
 
             LOG_INFO(m_logger) << "Last worker is stopping the stopwatch" << LOG_END;
@@ -112,17 +108,21 @@ void JDebugProcessingController::run(size_t nthreads) {
 }
 
 void JDebugProcessingController::scale(size_t nthreads) {
-    wait_until_stopped();
+    request_pause();
+    join();
     m_perf_metrics.stop(m_total_events_processed);
     m_perf_metrics.reset();
     run(nthreads);
 }
+
+void JDebugProcessingController::request_drain() {
+    m_stop_requested = true;
+}
 void JDebugProcessingController::request_pause() {
-    m_pause_requested = true;
+    m_stop_requested = true;
 }
 
-void JDebugProcessingController::wait_until_paused() {
-    m_pause_requested = true;
+void JDebugProcessingController::join() {
     for (auto * worker : m_workers) {
         worker->join();
     }
@@ -134,24 +134,14 @@ void JDebugProcessingController::wait_until_paused() {
     m_stop_achieved = true;
 }
 
-void JDebugProcessingController::request_stop() {
-    m_stop_requested = true;
+void JDebugProcessingController::finish() {
+    for (JEventProcessor *evt_prc: m_component_manager->get_evt_procs()) {
+        evt_prc->DoFinalize();
+    }
+    m_finish_achieved = true;
 }
 
-void JDebugProcessingController::wait_until_stopped() {
-    m_stop_requested = true;
-    for (auto * worker : m_workers) {
-        worker->join();
-    }
-    m_perf_metrics.stop(m_total_events_processed);
-    for (auto * worker : m_workers) {
-        delete worker;
-    }
-    m_workers.clear();
-    m_stop_achieved = true;
-}
-
-bool JDebugProcessingController::is_stopped() {
+bool JDebugProcessingController::is_paused() {
     return m_stop_achieved;
 }
 

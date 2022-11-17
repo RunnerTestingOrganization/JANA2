@@ -24,12 +24,12 @@ public:
     void initialize() override;
     void run(size_t nthreads) override;
     void scale(size_t nthreads) override;
-    void request_stop() override;
-    void wait_until_stopped() override;
+    void request_drain() override;
     void request_pause() override;
-    void wait_until_paused() override;
+    void join() override;
+    void finish() override;
 
-    bool is_stopped() override;
+    bool is_paused() override;
     bool is_finished() override;
     bool is_timed_out() override;
     bool is_excepted() override;
