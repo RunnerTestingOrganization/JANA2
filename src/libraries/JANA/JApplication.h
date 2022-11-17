@@ -68,21 +68,21 @@ public:
 
     // Controlling processing
 
-    void Initialize(void);
+    void Initialize();
     void Run(bool wait_until_finished = true);
+    void Join();
     void Scale(int nthreads);
-    void Stop(bool wait_until_idle = false);
-    void Resume() {};  // TODO: Do we need this?
-    void Quit(bool skip_join = false);
+    void Stop(bool drain_queues = true);
+    void Quit(bool drain_queues = true);
     void SetExitCode(int exitCode);
     int GetExitCode();
 
 
     // Performance/status monitoring
 
-    bool IsInitialized(void){return m_initialized;}
-    bool IsQuitting(void) { return m_quitting; }
-    bool IsDrainingQueues(void) { return m_draining_queues; }
+    bool IsInitialized() const { return m_initialized; }
+    bool IsQuitting() const { return m_quitting; }
+    bool IsDrainingQueues() const { return m_draining_queues; }
 
     void SetTicker(bool ticker_on = true);
     bool IsTickerEnabled();
@@ -136,10 +136,11 @@ private:
     std::shared_ptr<JComponentManager> m_component_manager;
     std::shared_ptr<JProcessingController> m_processing_controller;
 
-    bool m_quitting = false;
-    bool m_draining_queues = false;
-    bool m_skip_join = false;
     std::atomic_bool m_initialized {false};
+    std::atomic_bool m_pausing {false};
+    std::atomic_bool m_quitting {false};
+    std::atomic_bool m_draining_queues {false};
+
     bool m_ticker_on = true;
     bool m_timeout_on = true;
     bool m_extended_report = false;

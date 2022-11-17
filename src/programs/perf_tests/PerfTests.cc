@@ -32,6 +32,7 @@ int main() {
             std::cout << nthreads << "    " << app.GetInstantaneousRate() << std::endl;
         }
         app.Stop(true);
+        app.Join();
     }
     std::cout << "Running JTest using actual computations:" << std::endl;
     {

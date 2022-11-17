@@ -107,6 +107,8 @@ void JBenchmarker::RunUntilFinished() {
             std::cout << std::endl;
         }
     }
+    m_app->Stop(false);
+    m_app->Join();
 
     // Write results to files
     std::cout << "Writing test results to: " << m_output_dir << std::endl;
@@ -139,7 +141,6 @@ void JBenchmarker::RunUntilFinished() {
     std::cout << "Testing finished. To view a plot of test results:" << std::endl << std::endl;
     std::cout << "   cd " << m_output_dir << std::endl;
     std::cout << "   ./jana-plot-scaletest.py" << std::endl << std::endl;
-    m_app->Quit();
 }
 
 

@@ -147,7 +147,7 @@ void JApplication::Initialize() {
 void JApplication::Run(bool wait_until_finished) {
 
     Initialize();
-    if(m_quitting) return;
+    if (m_quitting || m_pausing) return;
 
     // Print summary of all config parameters (if any aren't default)
     m_params->PrintParameters(false);
@@ -160,8 +160,8 @@ void JApplication::Run(bool wait_until_finished) {
         return;
     }
 
-    // Monitor status of all threads
-    while (!m_quitting) {
+    // If Run(true), then run supervisor until workers finish or are paused
+    while (true) {
 
         // If we are finishing up (all input sources are closed, and are waiting for all events to finish processing)
         // This flag is used by the integrated rate calculator
@@ -209,17 +209,21 @@ void JApplication::Run(bool wait_until_finished) {
             throw m_processing_controller->get_exceptions()[0];
         }
     }
+    Join();
+}
 
+void JApplication::Join() {
     // Join all threads
-    if (!m_skip_join) {
-        LOG_INFO(m_logger) << "Merging threads ..." << LOG_END;
-        m_processing_controller->wait_until_stopped();
-    }
+    LOG_INFO(m_logger) << "Joining worker threads..." << LOG_END;
+    // TODO: if m_pausing then wait_until_paused() else wait_until_stopped
+    m_processing_controller->wait_until_stopped();
 
     LOG_INFO(m_logger) << "Event processing ended." << LOG_END;
     PrintFinalReport();
 
-    // Test for exception one more time, in case it shut down the topology before the supervisor could detect it
+    // Test for and re-throw exception, in case either:
+    // a) The supervisor responded to the exception's shutdown before it responded to the exception itself
+    // b) JApplication::Run was called with wait_until_finished=false, in which case there is no supervisor
     if (m_processing_controller->is_excepted()) {
         LOG_FATAL(m_logger) << "Exception in worker!" << LOG_END;
         SetExitCode((int) ExitCode::UnhandledException);
@@ -228,48 +232,21 @@ void JApplication::Run(bool wait_until_finished) {
     }
 }
 
-
 void JApplication::Scale(int nthreads) {
     LOG_INFO(m_logger) << "Scaling to " << nthreads << " threads" << LOG_END;
     m_processing_controller->scale(nthreads);
 }
 
-void JApplication::Stop(bool wait_until_idle) {
-    if (!m_initialized) {
-        // People might call Stop() during Initialize() rather than Run().
-        // For instance, during JEventProcessor::Init, or via Ctrl-C.
-        // If this is the case, we finish with initialization and then cancel the Run().
-        // We don't wait on  because we don't want to Finalize() anything
-        // we haven't Initialize()d yet.
-        m_quitting = true;
-    }
-    else {
-        // Once we've called Initialize(), we can Finish() all of our components
-        // whenever we like
-        m_processing_controller->request_stop();
-        if (wait_until_idle) {
-            m_processing_controller->wait_until_stopped();
-        }
-
-    }
+void JApplication::Stop(bool drain_queues) {
+    m_pausing = true;
+    m_processing_controller->request_stop();
+    // TODO: if drain_queues then m_processing_controller->request_drain() else m_processing_controller->request_pause()
 }
 
-void JApplication::Quit(bool skip_join) {
-
-    if (m_initialized) {
-        m_skip_join = skip_join;
-        m_quitting = true;
-        if (!skip_join && m_processing_controller != nullptr) {
-            Stop(true);
-        }
-    }
-
-    // People might call Quit() during Initialize() rather than Run().
-    // For instance, during JEventProcessor::Init, or via Ctrl-C.
-    // If this is the case, we exit immediately rather than make the user
-    // wait on a long Initialize() if no data has been generated yet.
-
-    _exit(m_exit_code);
+void JApplication::Quit(bool drain_queues) {
+    m_quitting = true;
+    m_processing_controller->request_stop();
+    // TODO: if drain_queues then m_processing_controller->request_drain() else m_processing_controller->request_pause()
 }
 
 void JApplication::SetExitCode(int exit_code) {

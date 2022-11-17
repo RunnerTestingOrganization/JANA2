@@ -121,11 +121,11 @@ void handle_sigint(int) {
     switch (g_sigint_count) {
         case 1:
             LOG_FATAL(*g_logger) << "Exiting gracefully..." << LOG_END;
-            g_app->Quit(false);
+            g_app->Quit(true);
             break;
         case 2:
-            LOG_FATAL(*g_logger) << "Exiting without waiting for threads to join..." << LOG_END;
-            japp->Quit(true);
+            LOG_FATAL(*g_logger) << "Exiting without draining queues..." << LOG_END;
+            japp->Quit(false);
             break;
         default:
             LOG_FATAL(*g_logger) << "Exiting immediately." << LOG_END;
