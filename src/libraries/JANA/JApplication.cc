@@ -174,12 +174,19 @@ void JApplication::Run(bool wait_until_finished) {
         }
 
         // Run until topology is deactivated, either because it finished or because another thread called stop()
-        if (m_processing_controller->is_stopped()) {
-            LOG_INFO(m_logger) << "All workers have stopped." << LOG_END;
+
+        if (m_processing_controller->is_finished()) {
+            // Event processing ended naturally because the event sources ran out of events
+            // As a result, we want Join() to finalize all arrows (particularly the JEventProcessors)
+            m_quitting = true;
+            LOG_INFO(m_logger) << "All workers have finished." << LOG_END;
             break;
         }
-        if (m_processing_controller->is_finished()) {
-            LOG_INFO(m_logger) << "All workers have finished." << LOG_END;
+        else if (m_processing_controller->is_stopped()) {
+            // Event processing ended prematurely because the user called JApp::Stop(), JApp::Quit(), or SIGINT.
+            // If the user called Stop(), we DON'T want Join() to finalize all arrows, so that processing can restart.
+            // but if they called Quit(), we DO. Stop() and Quit() will set m_pausing and m_quitting, respectively.
+            LOG_INFO(m_logger) << "All workers have been stopped." << LOG_END;
             break;
         }
 
@@ -237,7 +244,7 @@ void JApplication::Scale(int nthreads) {
     m_processing_controller->scale(nthreads);
 }
 
-void JApplication::Stop(bool drain_queues) {
+void JApplication::Pause(bool drain_queues) {
     m_pausing = true;
     m_processing_controller->request_stop();
     // TODO: if drain_queues then m_processing_controller->request_drain() else m_processing_controller->request_pause()

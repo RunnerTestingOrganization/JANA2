@@ -72,7 +72,7 @@ public:
     void Run(bool wait_until_finished = true);
     void Join();
     void Scale(int nthreads);
-    void Stop(bool drain_queues = true);
+    void Pause(bool drain_queues = true);
     void Quit(bool drain_queues = true);
     void SetExitCode(int exitCode);
     int GetExitCode();

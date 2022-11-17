@@ -107,7 +107,7 @@ void JBenchmarker::RunUntilFinished() {
             std::cout << std::endl;
         }
     }
-    m_app->Stop(false);
+    m_app->Pause(false);
     m_app->Join();
 
     // Write results to files

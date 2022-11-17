@@ -31,7 +31,7 @@ int main() {
             std::this_thread::sleep_for(std::chrono::seconds(20));
             std::cout << nthreads << "    " << app.GetInstantaneousRate() << std::endl;
         }
-        app.Stop(true);
+        app.Pause(true);
         app.Join();
     }
     std::cout << "Running JTest using actual computations:" << std::endl;
