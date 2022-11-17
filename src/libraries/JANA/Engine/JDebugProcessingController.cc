@@ -78,7 +78,6 @@ void JDebugProcessingController::run_worker() {
 
             // Previously, we finalized event processors _only_ if finish was achieved.
             // Now, however, "stop" means finalize everything, and the alternative is named "pause".
-            // TODO: Update JDebugProcessingController and JProcessingController to support pause. Maybe even JApplication.
             LOG_INFO(m_logger) << "Last worker is finalizing the event processors" << LOG_END;
             for (JEventProcessor *evt_prc: evt_procs) {
                 evt_prc->DoFinalize();
@@ -117,6 +116,22 @@ void JDebugProcessingController::scale(size_t nthreads) {
     m_perf_metrics.stop(m_total_events_processed);
     m_perf_metrics.reset();
     run(nthreads);
+}
+void JDebugProcessingController::request_pause() {
+    m_pause_requested = true;
+}
+
+void JDebugProcessingController::wait_until_paused() {
+    m_pause_requested = true;
+    for (auto * worker : m_workers) {
+        worker->join();
+    }
+    m_perf_metrics.stop(m_total_events_processed);
+    for (auto * worker : m_workers) {
+        delete worker;
+    }
+    m_workers.clear();
+    m_stop_achieved = true;
 }
 
 void JDebugProcessingController::request_stop() {

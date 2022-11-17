@@ -26,6 +26,8 @@ public:
     void scale(size_t nthreads) override;
     void request_stop() override;
     void wait_until_stopped() override;
+    void request_pause() override;
+    void wait_until_paused() override;
 
     bool is_stopped() override;
     bool is_finished() override;

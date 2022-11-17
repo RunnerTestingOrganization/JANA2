@@ -21,6 +21,8 @@ public:
     virtual void initialize() = 0;
     virtual void run(size_t nthreads) = 0;
     virtual void scale(size_t nthreads) = 0;
+    virtual void request_pause() = 0;
+    virtual void wait_until_paused() = 0;
     virtual void request_stop() = 0;
     virtual void wait_until_stopped() = 0;
     virtual bool is_stopped() = 0;
