@@ -168,40 +168,13 @@ void JApplication::Run(bool wait_until_finished) {
         return;
     }
 
-    // If Run(true), then run supervisor until workers finish or are paused
-    while (true) {
-
-        // If we are finishing up (all input sources are closed, and are waiting for all events to finish processing)
-        // This flag is used by the integrated rate calculator
-        if (!m_draining_queues) {
-            bool draining = true;
-            for (auto evt_src : m_component_manager->get_evt_srces()) {
-                draining &= (evt_src->GetStatus() == JEventSource::SourceStatus::Finished);
-            }
-            m_draining_queues = draining;
-        }
-
-        // Run until topology is deactivated, either because it finished or because another thread called stop()
-
-        if (m_processing_controller->is_finished()) {
-            // Event processing ended naturally because the event sources ran out of events
-            // As a result, we want Join() to finalize all arrows (particularly the JEventProcessors)
-            m_quitting = true;
-            LOG_INFO(m_logger) << "All workers have finished." << LOG_END;
-            break;
-        }
-        else if (m_processing_controller->is_paused()) {
-            // Event processing ended prematurely because the user called JApp::Pause(), JApp::Quit(), or SIGINT.
-            // If the user called Stop(), we DON'T want Join() to finalize all arrows, so that processing can restart.
-            // but if they called Quit(), we DO. Stop() and Quit() will set m_pausing and m_quitting, respectively.
-            LOG_INFO(m_logger) << "All workers have been stopped." << LOG_END;
-            break;
-        }
+    // If Run(true), then run supervisor loop until workers stop
+    while (!m_processing_controller->is_paused()) {
 
         // Sleep a few cycles
         std::this_thread::sleep_for(m_ticker_interval);
 
-        // Print status
+        // Print status (either ticker or performance table, depending on jana:extended_report)
         if( m_ticker_on ) PrintStatus();
 
         // Test for timeout
@@ -209,8 +182,10 @@ void JApplication::Run(bool wait_until_finished) {
             LOG_FATAL(m_logger) << "Detected timeout in worker! Stopping." << LOG_END;
             SetExitCode((int) ExitCode::Timeout);
             m_processing_controller->request_pause();
-            // TODO: Timeout error is not obvious enough from UI. Maybe throw an exception instead?
-            // TODO: Send USR2 signal to obtain a backtrace for timed out threads?
+            // request_pause() cannot take the topology into a paused state because the timed-out thread
+            // won't cooperate. However, it will notify the other threads to shut down. Hence we need the break.
+            // Note that join() is smart enough to detach timed-out threads instead of
+            // TODO: Consider obtaining a backtrace for the timed-out thread using USR2, and killing it via pthread_kill
             break;
         }
 
@@ -222,6 +197,17 @@ void JApplication::Run(bool wait_until_finished) {
 
             // We are going to throw the first exception and ignore the others.
             throw m_processing_controller->get_exceptions()[0];
+        }
+
+        // Test whether we are draining queues
+        // i.e. all input sources have closed, but some events are still processing
+        // This flag is used by the integrated rate calculator
+        if (!m_draining_queues) {
+            bool draining = true;
+            for (auto evt_src : m_component_manager->get_evt_srces()) {
+                draining &= (evt_src->GetStatus() == JEventSource::SourceStatus::Finished);
+            }
+            m_draining_queues = draining;
         }
     }
     Join();
