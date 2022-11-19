@@ -12,6 +12,7 @@
 
 
 
+
 TEST_CASE("TerminationTests") {
 
     auto parms = new JParameterManager;
@@ -50,14 +51,16 @@ TEST_CASE("TerminationTests") {
     SECTION("Arrow engine, interrupted during JEventSource::Open()") {
 
         app.SetParameterValue("jana:engine", 0);
-        auto source = new InterruptedSource("InterruptedSource", &app);
+        app.SetParameterValue("nthreads", 4);
+        auto source = new InterruptedSource("InterruptedSource", &app, true, false, false);
         app.Add(source);
         app.Run(true);
         REQUIRE(processor->processed_count == 0);
         REQUIRE(processor->finish_call_count == 0);
-        // Stop() tells JApplication to finish Initialize() but not to proceed with Run().
+        // Quit() tells JApplication to finish Initialize() but not to proceed with Run().
         // If we had called Quit() instead, it would have exited Initialize() immediately and ended the program.
 
+        REQUIRE(app.GetExitCode() == (int) JApplication::ExitCode::Success);
         REQUIRE(app.GetNEventsProcessed() == source->GetEventCount());
     }
 
@@ -90,3 +93,75 @@ TEST_CASE("TerminationTests") {
 };
 
 
+void test_internal_termination(bool call_quit_vs_pause, bool interrupt_open_vs_getevent, bool drain, int nthreads) {
+
+    std::ostringstream oss;
+    oss << "Internal termination via "
+        << (call_quit_vs_pause ? "Quit(" : "Pause(")
+        << (drain ? "drain=true)" : "drain=false") << " in "
+        << (interrupt_open_vs_getevent ? "Open()" : "GetEvent()") << " with nthreads=" << nthreads;
+
+    SECTION(oss.str()) {
+
+        auto parms = new JParameterManager;
+        parms->SetParameter("log:debug","JScheduler,JArrowProcessingController,JWorker,JArrow");
+        JApplication app(parms);
+        auto processor = new CountingProcessor(&app);
+        app.Add(processor);
+        app.SetParameterValue("jana:extended_report", 0);
+        app.SetParameterValue("jana:engine", 0);
+        app.SetParameterValue("nthreads", nthreads);
+        auto source = new InterruptedSource("InterruptedSource", &app, interrupt_open_vs_getevent, call_quit_vs_pause, drain);
+        app.Add(source);
+        app.Run(true);
+
+        // Should never time out
+        REQUIRE(app.GetExitCode() == (int) JApplication::ExitCode::Success);
+
+        if (interrupt_open_vs_getevent) {
+            // Interrupting Open() means no events should get emitted
+            REQUIRE(source->GetEventCount() == 0);
+        }
+        else {
+            // Interrupting GetEvent() on 4th event means no more events should have been emitted
+            REQUIRE(source->GetEventCount() == 4);
+        }
+
+        if (drain) {
+            // Draining queues means that each emitted event gets processed
+            REQUIRE(app.GetNEventsProcessed() == source->GetEventCount());
+            REQUIRE(processor->processed_count == source->GetEventCount());
+        }
+
+        if (call_quit_vs_pause) {
+            // Because we called Quit(), Run(true) should have called finish()
+            REQUIRE(processor->finish_call_count == 1);
+        }
+        else {
+            // Because we called Pause(), Run(true) should have exited without calling finish()
+            REQUIRE(processor->finish_call_count == 0);
+        }
+    }
+}
+
+
+TEST_CASE("InternalTerminationTests") {
+
+    // test_internal_termination(bool call_quit_vs_pause, bool interrupt_open_vs_getevent, bool drain, int nthreads)
+    test_internal_termination(true, true, true, 1);
+    test_internal_termination(true, true, true, 4);
+    test_internal_termination(true, true, false, 1);
+    test_internal_termination(true, true, false, 4);
+    test_internal_termination(true, false, true, 1);
+    test_internal_termination(true, false, true, 4);
+    test_internal_termination(true, false, false, 1);
+    test_internal_termination(true, false, false, 4);
+    test_internal_termination(false, true, true, 1);
+    test_internal_termination(false, true, true, 4);
+    test_internal_termination(false, true, false, 1);
+    test_internal_termination(false, true, false, 4);
+    test_internal_termination(false, false, true, 1);
+    test_internal_termination(false, false, true, 4);
+    test_internal_termination(false, false, false, 1);
+    test_internal_termination(false, false, false, 4);
+}
