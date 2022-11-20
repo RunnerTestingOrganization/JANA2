@@ -154,8 +154,15 @@ void JApplication::Run(bool wait_until_finished) {
 
     Initialize();
 
-    // If someone interrupted initialization, don't bother spinning up and tearing down the thread pool
-    if (m_quitting || m_pausing) return;
+    // If someone interrupted during initialization, don't bother spinning up and tearing down the thread pool
+    if (m_quitting) {
+        // Quit() _always_ finalizes the topology. This helps us be consistent, and helps avoid resource leaks.
+        m_processing_controller->finish();
+        return;
+    }
+    else if (m_pausing) {
+        return;
+    }
 
     // Print summary of all config parameters (if any aren't default)
     m_params->PrintParameters(false);

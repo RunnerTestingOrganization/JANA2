@@ -38,10 +38,10 @@ private:
     unsigned m_backoff_tries = 4;
 
     mutable std::mutex m_arrow_mutex;  // Protects access to arrow properties, except m_status
-    std::atomic<Status> m_status {Status::Unopened};
 
     // Scheduler stats
     // These are protected by the Topology mutex, NOT the Arrow mutex!!!
+    std::atomic<Status> m_status {Status::Unopened};
     int64_t m_thread_count = 0;            // Current number of threads assigned to this arrow
     std::atomic_int64_t m_running_upstreams {0};       // Current number of running arrows immediately upstream
     std::atomic_int64_t* m_running_arrows = nullptr;   // Current number of running arrows total, so we can detect pauses
@@ -173,16 +173,7 @@ public:
 
     void run() {
         Status status = m_status;
-
-        // if (status == Status::Unopened) {
-        //     LOG_DEBUG(m_logger) << "Arrow '" << m_name << "' run(): Not initialized!" << LOG_END;
-        //     throw JException("Arrow %s has not been initialized!", m_name.c_str());
-        // }
-        // if (status == Status::Running || m_status == Status::Finished) {
-        //     LOG_DEBUG(m_logger) << "Arrow '" << m_name << "' run() : " << status << " => " << status << LOG_END;
-        //     return;
-        // }
-        LOG_DEBUG(m_logger) << "Arrow '" << m_name << "' run() : " << status << " => Running" << LOG_END;
+        LOG_DEBUG(m_logger) << "Activating arrow '" << m_name << "' (Previously " << status << ")" << LOG_END;
         if (m_running_arrows != nullptr) (*m_running_arrows)++;
         for (auto listener: m_listeners) {
             listener->m_running_upstreams++;
@@ -194,10 +185,10 @@ public:
     void pause() {
         Status status = m_status;
         if (status != Status::Running) {
-            LOG_DEBUG(m_logger) << "JArrow '" << m_name << "' pause() : " << status << " => " << status << LOG_END;
+            LOG_DEBUG(m_logger) << "Ignoring pause() for arrow '" << m_name << "' (Status is " << status << ")" << LOG_END;
             return; // pause() is a no-op unless running
         }
-        LOG_DEBUG(m_logger) << "JArrow '" << m_name << "' pause() : " << status << " => Paused" << LOG_END;
+        LOG_INFO(m_logger) << "Pausing arrow '" << m_name << "' (Previously " << status << ")" << LOG_END;
         if (m_running_arrows != nullptr) (*m_running_arrows)--;
         for (auto listener: m_listeners) {
             listener->m_running_upstreams--;
@@ -211,20 +202,17 @@ public:
 
     void finish() {
         Status status = m_status;
-        LOG_DEBUG(m_logger) << "JArrow '" << m_name << "' finish() : " << status << " => Finished" << LOG_END;
         Status old_status = m_status;
-        // if (old_status == Status::Unopened) {
-        //     LOG_DEBUG(m_logger) << "JArrow '" << m_name << "': Uninitialized!" << LOG_END;
-        //     throw JException("JArrow::finish(): Arrow %s has not been initialized!", m_name.c_str());
-        // }
         if (old_status == Status::Running) {
+            // This is here because the JEventSourceArrow shuts itself off instead of having the JScheduler do it...
+            // TODO: Reconsider
             if (m_running_arrows != nullptr) (*m_running_arrows)--;
             for (auto listener: m_listeners) {
                 listener->m_running_upstreams--;
             }
         }
         if (old_status != Status::Finished) {
-            LOG_TRACE(m_logger) << "JArrow '" << m_name << "': Finalizing (this must only happen once)" << LOG_END;
+            LOG_DEBUG(m_logger) << "Finalizing arrow '" << m_name << "' (Previously " << status << ")" << LOG_END;
             this->finalize();
         }
         m_status = Status::Finished;

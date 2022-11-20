@@ -104,13 +104,14 @@ void test_internal_termination(bool call_quit_vs_pause, bool interrupt_open_vs_g
     SECTION(oss.str()) {
 
         auto parms = new JParameterManager;
-        parms->SetParameter("log:debug","JScheduler,JArrowProcessingController,JWorker,JArrow");
+        parms->SetParameter("log:debug","JScheduler,JArrowProcessingController,JWorker,JArrow,JArrowTopology");
         JApplication app(parms);
         auto processor = new CountingProcessor(&app);
         app.Add(processor);
         app.SetParameterValue("jana:extended_report", 0);
         app.SetParameterValue("jana:engine", 0);
         app.SetParameterValue("nthreads", nthreads);
+        app.SetParameterValue("jana:event_source_chunksize", 1); // Use this to control number of events that initially get emitted
         auto source = new InterruptedSource("InterruptedSource", &app, interrupt_open_vs_getevent, call_quit_vs_pause, drain);
         app.Add(source);
         app.Run(true);
@@ -149,19 +150,19 @@ TEST_CASE("InternalTerminationTests") {
 
     // test_internal_termination(bool call_quit_vs_pause, bool interrupt_open_vs_getevent, bool drain, int nthreads)
     test_internal_termination(true, true, true, 1);
-    test_internal_termination(true, true, true, 4);
+    test_internal_termination(true, true, true, 7);
     test_internal_termination(true, true, false, 1);
-    test_internal_termination(true, true, false, 4);
+    test_internal_termination(true, true, false, 7);
     test_internal_termination(true, false, true, 1);
-    test_internal_termination(true, false, true, 4);
+    test_internal_termination(true, false, true, 7);
     test_internal_termination(true, false, false, 1);
-    test_internal_termination(true, false, false, 4);
+    test_internal_termination(true, false, false, 7);
     test_internal_termination(false, true, true, 1);
-    test_internal_termination(false, true, true, 4);
+    test_internal_termination(false, true, true, 7);
     test_internal_termination(false, true, false, 1);
-    test_internal_termination(false, true, false, 4);
+    test_internal_termination(false, true, false, 7);
     test_internal_termination(false, false, true, 1);
-    test_internal_termination(false, false, true, 4);
+    test_internal_termination(false, false, true, 7);
     test_internal_termination(false, false, false, 1);
-    test_internal_termination(false, false, false, 4);
+    test_internal_termination(false, false, false, 7);
 }

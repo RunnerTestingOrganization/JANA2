@@ -105,6 +105,7 @@ public:
                                                               m_event_pool_size,
                                                               m_location_count,
                                                               m_limit_total_events_in_flight);
+        m_topology->m_logger = m_arrow_logger;
         return m_topology;
 
     }

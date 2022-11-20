@@ -7,7 +7,6 @@
 #include <JANA/Utils/JCpuInfo.h>
 #include <JANA/JLogger.h>
 
-#include <memory>
 
 using millisecs = std::chrono::duration<double, std::milli>;
 using secs = std::chrono::duration<double>;
@@ -113,7 +112,6 @@ void JArrowProcessingController::join() {
     // Join all the worker threads.
     // Do not trigger the pause (we may want the pause to come internally, e.g. from an event source running out.)
     // Do NOT finish() the topology (we want the ability to be able to restart it)
-    m_topology->achieve_pause();
 }
 
 void JArrowProcessingController::finish() {
@@ -121,12 +119,10 @@ void JArrowProcessingController::finish() {
 }
 
 bool JArrowProcessingController::is_paused() {
-    // TODO: Protect topology current status
     return m_topology->m_current_status == JArrowTopology::Status::Paused;
 }
 
 bool JArrowProcessingController::is_finished() {
-    // TODO: Protect topology current status
     return m_topology->m_current_status == JArrowTopology::Status::Finished;
 }
 

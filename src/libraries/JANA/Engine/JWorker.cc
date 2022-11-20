@@ -212,6 +212,7 @@ void JWorker::loop() {
                 auto backoff_duration = initial_backoff_time;
 
                 while (current_tries <= backoff_tries &&
+                       (m_assignment->get_status() == JArrow::Status::Running) &&  // This one is ugly. Arrow could have turned itself off via Quit(drain=true) and Worker wouldn't know
                        (last_result == JArrowMetrics::Status::KeepGoing || last_result == JArrowMetrics::Status::ComeBackLater || last_result == JArrowMetrics::Status::NotRunYet) &&
                        (m_run_state == RunState::Running) &&
                        (jclock_t::now() - start_time) < checkin_time) {

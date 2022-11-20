@@ -39,33 +39,21 @@ std::ostream& operator<<(std::ostream& os, JArrowTopology::Status status) {
 void JArrowTopology::initialize() {
     assert(m_current_status == Status::Uninitialized);
     for (JArrow* arrow : arrows) {
+        LOG_DEBUG(m_logger) << "Initializing arrow '" << arrow->get_name() << "'" << LOG_END;
         arrow->initialize();
     }
     m_current_status = Status::Paused;
 }
 
 void JArrowTopology::drain() {
-    if (m_current_status == Status::Finished) {
-        LOG_DEBUG(m_logger) << "JArrowTopology: drain(): Skipping because topology is already Finished" << LOG_END;
+    if (m_current_status != Status::Running) {
+        LOG_DEBUG(m_logger) << "request_drain(): Skipping drain() because topology is not running" << LOG_END;
         return;
     }
-    LOG_DEBUG(m_logger) << "JArrowTopology: drain()" << LOG_END;
+    LOG_INFO(m_logger) << "Pausing all sources and draining queues..." << LOG_END;
     for (auto source : sources) {
-        if (source->get_status() == JArrow::Status::Running) {
-            // TODO: I'm considering creating a single TopologyMutex that controls access to
-            //         - scheduler
-            //         - arrow thread counts
-            //         - arrow state
-            //         - running upstream counts
-            //         - running arrow counts
-            //         - total worker count
-        }
         source->pause();
         m_current_status = Status::Draining;
-        // We pause (as opposed to finish) for two reasons:
-        // 1. There might be workers in the middle of calling eventSource->GetEvent.
-        // 2. drain() might be called from a signal handler. It isn't safe to make syscalls during signal handlers
-        //    due to risk of deadlock. (We technically shouldn't even do logging!)
     }
 }
 
@@ -97,16 +85,15 @@ void JArrowTopology::request_pause() {
     // This sets all Running arrows to Paused, which prevents Workers from picking up any additional assignments
     // Once all Workers have completed their remaining assignments, the scheduler will notify us via achieve_pause().
     Status current_status = m_current_status;
-    if (current_status == Status::Running) {
-        LOG_DEBUG(m_logger) << "JArrowTopology: request_pause() : " << current_status << " => Pausing" << LOG_END;
-        for (auto arrow: arrows) {
-            arrow->pause();
-            // If arrow is not running, pause() is a no-op
-        }
-        m_current_status = Status::Pausing;
+    if (current_status != Status::Running) {
+        LOG_DEBUG(m_logger) << "Ignoring request_pause(): Status is " << current_status << LOG_END;
     }
     else {
-        LOG_DEBUG(m_logger) << "JArrowTopology: request_pause() : " << current_status << " => " << current_status << LOG_END;
+        LOG_INFO(m_logger) << "Pausing execution immediately without draining queues..." << LOG_END;
+        for (auto arrow: arrows) {
+            arrow->pause(); // If arrow is not running, pause() is a no-op
+        }
+        m_current_status = Status::Pausing;
     }
 }
 
@@ -114,12 +101,12 @@ void JArrowTopology::achieve_pause() {
     // This is meant to be used by the scheduler to tell us when all workers have stopped, so it is safe to finish(), etc
     Status current_status = m_current_status;
     if (current_status == Status::Running || current_status == Status::Pausing || current_status == Status::Draining) {
-        LOG_DEBUG(m_logger) << "JArrowTopology: achieve_pause() : " << current_status << " => " << Status::Paused << LOG_END;
+        LOG_INFO(m_logger) << "Topology has successfully paused." << LOG_END;
         metrics.stop();
         m_current_status = Status::Paused;
     }
     else {
-        LOG_DEBUG(m_logger) << "JArrowTopology: achieve_pause() : " << current_status << " => " << current_status << LOG_END;
+        LOG_DEBUG(m_logger) << "Ignoring achieve_pause(): Status is " << current_status << LOG_END;
     }
 }
 
