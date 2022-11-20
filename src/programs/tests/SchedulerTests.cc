@@ -38,6 +38,11 @@ TEST_CASE("SchedulerTests") {
     topology->arrows.push_back(sum_everything);
     topology->sinks.push_back(sum_everything);
 
+    emit_rand_ints->set_running_arrows(&topology->running_arrow_count);
+    multiply_by_two->set_running_arrows(&topology->running_arrow_count);
+    subtract_one->set_running_arrows(&topology->running_arrow_count);
+    sum_everything->set_running_arrows(&topology->running_arrow_count);
+
     emit_rand_ints->set_chunksize(1);
     topology->run(1);
 
@@ -117,6 +122,11 @@ TEST_CASE("SchedulerRoundRobinBehaviorTests") {
     topology->arrows.push_back(subtract_one);
     topology->arrows.push_back(sum_everything);
     topology->sinks.push_back(sum_everything);
+
+    emit_rand_ints->set_running_arrows(&topology->running_arrow_count);
+    multiply_by_two->set_running_arrows(&topology->running_arrow_count);
+    subtract_one->set_running_arrows(&topology->running_arrow_count);
+    sum_everything->set_running_arrows(&topology->running_arrow_count);
 
     emit_rand_ints->set_chunksize(1);
     topology->run(1);
