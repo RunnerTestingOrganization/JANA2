@@ -10,7 +10,7 @@ on:
 jobs:
   jana2_halld_recon:
     name: halld_recon
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, macOS, ARM64]
 
     steps:
       - uses: actions/checkout@v4
@@ -74,7 +74,7 @@ jobs:
 
           echo "Building start"
           cmake3 \$JANA_HOME -DUSE_XERCES=1 -DCMAKE_CXX_STANDARD=17
-          make install
+          make install -j12
           EOF
           chmod +x jana_build.sh
     
@@ -127,7 +127,7 @@ jobs:
           chmod +x \$JANA_HOME/bin/*
 
           cd src
-          nice scons install
+          scons install -j12
           EOF
           chmod +x halld_recon_build.sh
 
