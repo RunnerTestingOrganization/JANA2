@@ -17,7 +17,13 @@ jobs:
         with: 
           ref: refs/tags/rasool_jana2
           path: JANA2
-
+      
+      - name: checking cvmfs mouting status
+        run: |
+        echo "getting group files"
+        ls /opt/cvmfs/oasis.opensciencegrid.org/gluex/group/
+        echo "getting softwares listing"
+        ls /opt/cvmfs/oasis.opensciencegrid.org/gluex/group/halld/Software/build_scripts
       - name: Create jana build files
         run: |
           cd JANA2
