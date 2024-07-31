@@ -80,6 +80,7 @@ jobs:
       - name: Build JANA2 on Alma9
         run: |
           docker run --rm \
+            --platform linux/amd64 \
             --user $(id -u):$(id -g) \
             --volume /opt/cvmfs/oasis.opensciencegrid.org/gluex/group/:/group \
             --mount type=bind,source=${{ github.workspace }},target=/workspace \
@@ -133,6 +134,7 @@ jobs:
       - name: Build Halld_recon on Alma9
         run: |
           docker run --rm \
+            --platform linux/amd64 \
             --user $(id -u):$(id -g) \
             --volume /opt/cvmfs/oasis.opensciencegrid.org/gluex/group/:/group \
             --mount type=bind,source=${{ github.workspace }},target=/workspace \
