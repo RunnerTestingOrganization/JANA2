@@ -18,7 +18,7 @@ jobs:
           ref: refs/tags/rasool_jana2
           path: JANA2
 
-      - name: Create jana build files first
+      - name: Create jana build files
         run: |
           cd JANA2
           cat <<EOF > jana_prereqs_version.xml
