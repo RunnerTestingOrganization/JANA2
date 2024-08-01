@@ -20,6 +20,7 @@ jobs:
       
       - name: Check CVMFS mount check at root
         run: |
+          pwd
           ls .
           echo "I am user"
           whoami
