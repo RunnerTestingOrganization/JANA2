@@ -22,6 +22,7 @@ jobs:
         run: |
           echo "I am user"
           whoami
+          id -u
           echo "Checking CVMFS mount status"
           if [ -d "/opt/cvmfs/oasis.opensciencegrid.org/gluex/group/" ]; then
             echo "Path exists"
