@@ -20,13 +20,15 @@ jobs:
       
       - name: Check CVMFS mount check at root
         run: |
+          echo "I am user"
+          whoami
           echo "Checking CVMFS mount status"
           if [ -d "/opt/cvmfs/oasis.opensciencegrid.org/gluex/group/" ]; then
             echo "Path exists"
             echo "Getting group files:"
-            sudo ls /opt/cvmfs/oasis.opensciencegrid.org/gluex/group/
+            ls /opt/cvmfs/oasis.opensciencegrid.org/gluex/group/
             echo "Getting software listings:"
-            sudo ls /opt/cvmfs/oasis.opensciencegrid.org/gluex/group/halld/Software/build_scripts
+            ls /opt/cvmfs/oasis.opensciencegrid.org/gluex/group/halld/Software/build_scripts
           else
             echo "Path does not exist or is not mounted correctly"
             exit 1
