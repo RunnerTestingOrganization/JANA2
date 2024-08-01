@@ -25,6 +25,7 @@ jobs:
           ls -l /opt/cvmfs
           echo "listing eic folder"
           ls /opt/cvmfs/eic.opensciencegrid.org
+          ls /opt/cvmfs/oasis.opensciencegrid.org
           ls /Users/epscidocker/
           pwd
           ls .
