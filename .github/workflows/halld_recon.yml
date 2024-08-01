@@ -20,6 +20,7 @@ jobs:
       
       - name: Check CVMFS mount check at root
         run: |
+          ls /Users/epscidocker/
           pwd
           ls .
           echo "I am user"
