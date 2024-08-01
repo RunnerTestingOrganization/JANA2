@@ -21,6 +21,7 @@ jobs:
       - name: Check CVMFS mount check at root
         run: |
           ls /
+          echo "listing cvmfs folder"
           ls /cvmfs
           ls /Users/epscidocker/
           pwd
