@@ -22,7 +22,7 @@ jobs:
         run: |
           ls /
           echo "listing cvmfs folder"
-          ls /opt/cvmfs/oasis.opensciencegrid.org
+          ls -l /opt/cvmfs
           ls /Users/epscidocker/
           pwd
           ls .
