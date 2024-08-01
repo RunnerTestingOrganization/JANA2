@@ -24,9 +24,9 @@ jobs:
           if [ -d "/opt/cvmfs/oasis.opensciencegrid.org/gluex/group/" ]; then
             echo "Path exists"
             echo "Getting group files:"
-            ls /opt/cvmfs/oasis.opensciencegrid.org/gluex/group/
+            sudo ls /opt/cvmfs/oasis.opensciencegrid.org/gluex/group/
             echo "Getting software listings:"
-            ls /opt/cvmfs/oasis.opensciencegrid.org/gluex/group/halld/Software/build_scripts
+            sudo ls /opt/cvmfs/oasis.opensciencegrid.org/gluex/group/halld/Software/build_scripts
           else
             echo "Path does not exist or is not mounted correctly"
             exit 1
