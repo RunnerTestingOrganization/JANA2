@@ -18,7 +18,7 @@ jobs:
           ref: refs/tags/rasool_jana2
           path: JANA2
       
-      - name: Check CVMFS mount check
+      - name: Check CVMFS mount check at root
         run: |
           echo "Checking CVMFS mount status"
           if [ -d "/opt/cvmfs/oasis.opensciencegrid.org/gluex/group/" ]; then
