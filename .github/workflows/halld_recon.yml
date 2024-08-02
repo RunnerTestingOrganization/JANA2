@@ -21,7 +21,7 @@ jobs:
       - name: Check CVMFS mount check at epscidocker
         run: |
           ls /
-          echo "listing cvmfs folder"
+          echo "listing cvmfs folder here"
           ls -l /opt/cvmfs
           echo "listing eic folder"
           ls /opt/cvmfs/eic.opensciencegrid.org
