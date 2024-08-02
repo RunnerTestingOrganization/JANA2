@@ -32,7 +32,6 @@ jobs:
           echo "I am user"
           whoami
           id -u
-          csrutil status
           echo "Checking CVMFS mount status"
           if [ -d "/opt/cvmfs/oasis.opensciencegrid.org/gluex/group/" ]; then
             echo "Path exists"
